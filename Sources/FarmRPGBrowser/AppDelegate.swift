@@ -28,6 +28,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Build content: control strip on top, web view below
         controlStrip = ControlStripView(window: mainWindow, webViewController: webViewController)
 
+        // Add toggle button to the titlebar (next to traffic lights)
+        let titlebarAccessory = controlStrip.makeTitlebarAccessory()
+        mainWindow.addTitlebarAccessoryViewController(titlebarAccessory)
+
         // Accessing .view triggers loadView(), so webView exists after this
         let webView = webViewController.view
         webViewController.zoomLevel = prefs.zoomLevel
@@ -37,13 +41,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         container.addSubview(controlStrip)
         container.addSubview(webView)
 
-        // The titlebar is transparent and full-size content view pushes
-        // content under it; offset the control strip below the traffic lights
-        let titlebarOffset: CGFloat = 28
+        // fullSizeContentView pushes content under titlebar; offset below it
+        let titlebarHeight: CGFloat = 28
 
         let stripHeightConstraint = controlStrip.heightAnchor.constraint(equalToConstant: controlStrip.totalHeight)
         NSLayoutConstraint.activate([
-            controlStrip.topAnchor.constraint(equalTo: container.topAnchor, constant: titlebarOffset),
+            controlStrip.topAnchor.constraint(equalTo: container.topAnchor, constant: titlebarHeight),
             controlStrip.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             controlStrip.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             stripHeightConstraint,

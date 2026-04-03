@@ -9,7 +9,7 @@ class ControlStripView: NSView {
     private var alwaysOnTopButton: NSButton!
     private var toggleButton: NSButton!
     private var stripContainer: NSView!
-    private var isExpanded = false
+    private(set) var isExpanded = false
 
     private let stripHeight: CGFloat = 72
 
@@ -24,18 +24,31 @@ class ControlStripView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    private func setupViews() {
-        // Toggle button — sits in the titlebar area
+    /// Create the titlebar accessory with the toggle button
+    func makeTitlebarAccessory() -> NSTitlebarAccessoryViewController {
         toggleButton = NSButton(frame: .zero)
         toggleButton.translatesAutoresizingMaskIntoConstraints = false
         toggleButton.bezelStyle = .inline
-        toggleButton.title = "Controls ▼"
+        toggleButton.title = "▼ Controls"
         toggleButton.font = NSFont.systemFont(ofSize: 11, weight: .medium)
         toggleButton.target = self
         toggleButton.action = #selector(toggleStrip)
-        addSubview(toggleButton)
 
-        // Container for the control strip
+        let accessoryView = NSView(frame: NSRect(x: 0, y: 0, width: 100, height: 28))
+        accessoryView.addSubview(toggleButton)
+        NSLayoutConstraint.activate([
+            toggleButton.centerYAnchor.constraint(equalTo: accessoryView.centerYAnchor),
+            toggleButton.leadingAnchor.constraint(equalTo: accessoryView.leadingAnchor, constant: 4),
+        ])
+
+        let accessory = NSTitlebarAccessoryViewController()
+        accessory.view = accessoryView
+        accessory.layoutAttribute = .trailing
+        return accessory
+    }
+
+    private func setupViews() {
+        // Container for the control strip (hidden by default)
         stripContainer = NSView(frame: .zero)
         stripContainer.translatesAutoresizingMaskIntoConstraints = false
         stripContainer.wantsLayer = true
@@ -116,13 +129,8 @@ class ControlStripView: NSView {
         let rowHeight: CGFloat = 36
         // Layout
         NSLayoutConstraint.activate([
-            // Toggle button at top, centered
-            toggleButton.topAnchor.constraint(equalTo: topAnchor, constant: 4),
-            toggleButton.centerXAnchor.constraint(equalTo: centerXAnchor),
-            toggleButton.heightAnchor.constraint(equalToConstant: 18),
-
-            // Strip container below toggle
-            stripContainer.topAnchor.constraint(equalTo: toggleButton.bottomAnchor, constant: 2),
+            // Strip container fills the view
+            stripContainer.topAnchor.constraint(equalTo: topAnchor),
             stripContainer.leadingAnchor.constraint(equalTo: leadingAnchor),
             stripContainer.trailingAnchor.constraint(equalTo: trailingAnchor),
             stripContainer.heightAnchor.constraint(equalToConstant: stripHeight),
@@ -162,15 +170,13 @@ class ControlStripView: NSView {
     }
 
     var totalHeight: CGFloat {
-        // Toggle button height + padding
-        let base: CGFloat = 24
-        return isExpanded ? base + 2 + stripHeight : base
+        return isExpanded ? stripHeight : 0
     }
 
     @objc private func toggleStrip() {
         isExpanded.toggle()
         stripContainer.isHidden = !isExpanded
-        toggleButton.title = isExpanded ? "Controls ▲" : "Controls ▼"
+        toggleButton.title = isExpanded ? "▲ Controls" : "▼ Controls"
 
         // Update height constraint
         heightConstraint?.constant = totalHeight
