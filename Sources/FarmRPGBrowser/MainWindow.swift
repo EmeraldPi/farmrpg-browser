@@ -10,7 +10,7 @@ class MainWindow: NSWindow {
         )
 
         self.title = "FarmRPG"
-        self.minSize = NSSize(width: 320, height: 480)
+        self.minSize = NSSize(width: 200, height: 300)
         self.titlebarAppearsTransparent = true
         self.titleVisibility = .hidden
         self.isMovableByWindowBackground = true

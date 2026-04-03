@@ -9,9 +9,9 @@ class ControlStripView: NSView {
     private var alwaysOnTopButton: NSButton!
     private var toggleButton: NSButton!
     private var stripContainer: NSView!
+    private var flowLayout: FlowLayoutView!
+    private var stripHeightConstraint: NSLayoutConstraint!
     private(set) var isExpanded = false
-
-    private let stripHeight: CGFloat = 72
 
     init(window: MainWindow, webViewController: WebViewController) {
         self.targetWindow = window
@@ -56,36 +56,29 @@ class ControlStripView: NSView {
         stripContainer.isHidden = true
         addSubview(stripContainer)
 
-        // --- Controls inside the strip ---
+        // --- Build control groups as compact views ---
 
         // Always on top toggle
         alwaysOnTopButton = NSButton(checkboxWithTitle: "Always on Top", target: self, action: #selector(toggleAlwaysOnTop))
-        alwaysOnTopButton.translatesAutoresizingMaskIntoConstraints = false
         alwaysOnTopButton.font = NSFont.systemFont(ofSize: 11)
         alwaysOnTopButton.state = targetWindow?.isAlwaysOnTop == true ? .on : .off
-        stripContainer.addSubview(alwaysOnTopButton)
 
-        // Opacity label
+        // Opacity group
         let opacityLabel = NSTextField(labelWithString: "Opacity:")
-        opacityLabel.translatesAutoresizingMaskIntoConstraints = false
         opacityLabel.font = NSFont.systemFont(ofSize: 11)
-        stripContainer.addSubview(opacityLabel)
-
-        // Opacity slider
         opacitySlider = NSSlider(value: Double(targetWindow?.alphaValue ?? 1.0), minValue: 0.3, maxValue: 1.0, target: self, action: #selector(opacityChanged(_:)))
-        opacitySlider.translatesAutoresizingMaskIntoConstraints = false
         opacitySlider.isContinuous = true
-        stripContainer.addSubview(opacitySlider)
+        opacitySlider.widthAnchor.constraint(equalToConstant: 80).isActive = true
+        let opacityGroup = makeGroup([opacityLabel, opacitySlider])
 
         // Snap buttons
-        let snapStack = NSStackView()
-        snapStack.translatesAutoresizingMaskIntoConstraints = false
-        snapStack.orientation = .horizontal
-        snapStack.spacing = 2
-
         let snapPositions: [(String, SnapPosition)] = [
             ("↖", .topLeft), ("↗", .topRight), ("↙", .bottomLeft), ("↘", .bottomRight), ("◎", .center)
         ]
+        var snapButtons: [NSView] = []
+        let snapLabel = NSTextField(labelWithString: "Snap:")
+        snapLabel.font = NSFont.systemFont(ofSize: 11)
+        snapButtons.append(snapLabel)
         for (title, position) in snapPositions {
             let btn = NSButton(frame: .zero)
             btn.bezelStyle = .inline
@@ -95,82 +88,62 @@ class ControlStripView: NSView {
             btn.tag = snapPositions.firstIndex(where: { $0.1 == position })!
             btn.action = #selector(snapAction(_:))
             btn.widthAnchor.constraint(equalToConstant: 28).isActive = true
-            snapStack.addArrangedSubview(btn)
+            snapButtons.append(btn)
         }
-        stripContainer.addSubview(snapStack)
+        let snapGroup = makeGroup(snapButtons)
 
-        // --- Row 2: Zoom ---
+        // Zoom group
         let zoomTitleLabel = NSTextField(labelWithString: "Zoom:")
-        zoomTitleLabel.translatesAutoresizingMaskIntoConstraints = false
         zoomTitleLabel.font = NSFont.systemFont(ofSize: 11)
-        stripContainer.addSubview(zoomTitleLabel)
-
         let initialZoom = Preferences.shared.zoomLevel
         zoomSlider = NSSlider(value: Double(initialZoom), minValue: 0.25, maxValue: 3.0, target: self, action: #selector(zoomChanged(_:)))
-        zoomSlider.translatesAutoresizingMaskIntoConstraints = false
         zoomSlider.isContinuous = true
-        stripContainer.addSubview(zoomSlider)
-
+        zoomSlider.widthAnchor.constraint(equalToConstant: 80).isActive = true
         zoomLabel = NSTextField(labelWithString: "\(Int(initialZoom * 100))%")
-        zoomLabel.translatesAutoresizingMaskIntoConstraints = false
         zoomLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         zoomLabel.alignment = .right
-        stripContainer.addSubview(zoomLabel)
-
+        zoomLabel.widthAnchor.constraint(equalToConstant: 36).isActive = true
         let zoomResetBtn = NSButton(frame: .zero)
         zoomResetBtn.bezelStyle = .inline
         zoomResetBtn.title = "Reset"
         zoomResetBtn.font = NSFont.systemFont(ofSize: 10)
-        zoomResetBtn.translatesAutoresizingMaskIntoConstraints = false
         zoomResetBtn.target = self
         zoomResetBtn.action = #selector(zoomReset)
-        stripContainer.addSubview(zoomResetBtn)
+        let zoomGroup = makeGroup([zoomTitleLabel, zoomSlider, zoomLabel, zoomResetBtn])
 
-        let rowHeight: CGFloat = 36
-        // Layout
+        // Flow layout that wraps groups
+        flowLayout = FlowLayoutView(items: [alwaysOnTopButton, opacityGroup, snapGroup, zoomGroup])
+        flowLayout.translatesAutoresizingMaskIntoConstraints = false
+        stripContainer.addSubview(flowLayout)
+
         NSLayoutConstraint.activate([
-            // Strip container fills the view
             stripContainer.topAnchor.constraint(equalTo: topAnchor),
             stripContainer.leadingAnchor.constraint(equalTo: leadingAnchor),
             stripContainer.trailingAnchor.constraint(equalTo: trailingAnchor),
-            stripContainer.heightAnchor.constraint(equalToConstant: stripHeight),
+            stripContainer.bottomAnchor.constraint(equalTo: bottomAnchor),
 
-            // Row 1: Always on top, opacity, snap (centered in top half)
-            alwaysOnTopButton.leadingAnchor.constraint(equalTo: stripContainer.leadingAnchor, constant: 8),
-            alwaysOnTopButton.centerYAnchor.constraint(equalTo: stripContainer.topAnchor, constant: rowHeight / 2),
-
-            opacityLabel.leadingAnchor.constraint(equalTo: alwaysOnTopButton.trailingAnchor, constant: 12),
-            opacityLabel.centerYAnchor.constraint(equalTo: alwaysOnTopButton.centerYAnchor),
-
-            opacitySlider.leadingAnchor.constraint(equalTo: opacityLabel.trailingAnchor, constant: 4),
-            opacitySlider.centerYAnchor.constraint(equalTo: alwaysOnTopButton.centerYAnchor),
-            opacitySlider.widthAnchor.constraint(greaterThanOrEqualToConstant: 60),
-
-            snapStack.leadingAnchor.constraint(equalTo: opacitySlider.trailingAnchor, constant: 12),
-            snapStack.trailingAnchor.constraint(lessThanOrEqualTo: stripContainer.trailingAnchor, constant: -8),
-            snapStack.centerYAnchor.constraint(equalTo: alwaysOnTopButton.centerYAnchor),
-
-            // Row 2: Zoom (centered in bottom half)
-            zoomTitleLabel.leadingAnchor.constraint(equalTo: stripContainer.leadingAnchor, constant: 8),
-            zoomTitleLabel.centerYAnchor.constraint(equalTo: stripContainer.topAnchor, constant: rowHeight + rowHeight / 2),
-
-            zoomSlider.leadingAnchor.constraint(equalTo: zoomTitleLabel.trailingAnchor, constant: 4),
-            zoomSlider.centerYAnchor.constraint(equalTo: zoomTitleLabel.centerYAnchor),
-            zoomSlider.widthAnchor.constraint(greaterThanOrEqualToConstant: 120),
-
-            zoomLabel.leadingAnchor.constraint(equalTo: zoomSlider.trailingAnchor, constant: 6),
-            zoomLabel.centerYAnchor.constraint(equalTo: zoomTitleLabel.centerYAnchor),
-            zoomLabel.widthAnchor.constraint(equalToConstant: 40),
-
-            zoomResetBtn.leadingAnchor.constraint(equalTo: zoomLabel.trailingAnchor, constant: 6),
-            zoomResetBtn.centerYAnchor.constraint(equalTo: zoomTitleLabel.centerYAnchor),
+            flowLayout.topAnchor.constraint(equalTo: stripContainer.topAnchor, constant: 4),
+            flowLayout.leadingAnchor.constraint(equalTo: stripContainer.leadingAnchor, constant: 8),
+            flowLayout.trailingAnchor.constraint(equalTo: stripContainer.trailingAnchor, constant: -8),
+            flowLayout.bottomAnchor.constraint(equalTo: stripContainer.bottomAnchor, constant: -4),
         ])
 
         self.translatesAutoresizingMaskIntoConstraints = false
     }
 
+    private func makeGroup(_ views: [NSView]) -> NSStackView {
+        let stack = NSStackView(views: views)
+        stack.orientation = .horizontal
+        stack.spacing = 4
+        stack.alignment = .centerY
+        return stack
+    }
+
     var totalHeight: CGFloat {
-        return isExpanded ? stripHeight : 0
+        if !isExpanded { return 0 }
+        // Ask the flow layout for its needed height
+        let width = stripContainer.bounds.width > 0 ? stripContainer.bounds.width - 16 : 320
+        return flowLayout.heightForWidth(width) + 8
     }
 
     @objc private func toggleStrip() {
@@ -178,10 +151,15 @@ class ControlStripView: NSView {
         stripContainer.isHidden = !isExpanded
         toggleButton.title = isExpanded ? "▲ Controls" : "▼ Controls"
 
-        // Update height constraint
-        heightConstraint?.constant = totalHeight
+        updateHeight()
+    }
 
-        // Animate
+    func updateHeight() {
+        // Find the height constraint set by AppDelegate
+        if let hc = constraints.first(where: { $0.firstAttribute == .height && $0.firstItem === self }) {
+            hc.constant = totalHeight
+        }
+
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.15
             context.allowsImplicitAnimation = true
@@ -190,8 +168,17 @@ class ControlStripView: NSView {
         }
     }
 
-    private var heightConstraint: NSLayoutConstraint? {
-        return constraints.first(where: { $0.firstAttribute == .height && $0.firstItem === self })
+    override func layout() {
+        super.layout()
+        // Recalculate height when width changes (e.g. window resize)
+        if isExpanded {
+            if let hc = constraints.first(where: { $0.firstAttribute == .height && $0.firstItem === self }) {
+                let newHeight = totalHeight
+                if abs(hc.constant - newHeight) > 1 {
+                    hc.constant = newHeight
+                }
+            }
+        }
     }
 
     @objc private func toggleAlwaysOnTop() {
@@ -236,5 +223,93 @@ class ControlStripView: NSView {
         let zoom = webViewController?.zoomLevel ?? 1.0
         zoomSlider.doubleValue = Double(zoom)
         zoomLabel.stringValue = "\(Int(zoom * 100))%"
+    }
+}
+
+// MARK: - FlowLayoutView
+
+/// A view that lays out its items horizontally, wrapping to new rows when needed.
+/// Each row is centered horizontally.
+class FlowLayoutView: NSView {
+    private let items: [NSView]
+    private let itemSpacing: CGFloat = 12
+    private let rowSpacing: CGFloat = 6
+
+    init(items: [NSView]) {
+        self.items = items
+        super.init(frame: .zero)
+        for item in items {
+            item.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(item)
+        }
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func heightForWidth(_ width: CGFloat) -> CGFloat {
+        let rows = computeRows(forWidth: width)
+        var totalHeight: CGFloat = 0
+        for row in rows {
+            let rowHeight = row.map { $0.fittingSize.height }.max() ?? 0
+            totalHeight += rowHeight
+        }
+        totalHeight += CGFloat(max(0, rows.count - 1)) * rowSpacing
+        return max(totalHeight, 24)
+    }
+
+    private func computeRows(forWidth width: CGFloat) -> [[NSView]] {
+        var rows: [[NSView]] = [[]]
+        var currentRowWidth: CGFloat = 0
+
+        for item in items {
+            let itemWidth = item.fittingSize.width
+            if !rows[rows.count - 1].isEmpty && currentRowWidth + itemSpacing + itemWidth > width {
+                rows.append([])
+                currentRowWidth = 0
+            }
+            if currentRowWidth > 0 {
+                currentRowWidth += itemSpacing
+            }
+            rows[rows.count - 1].append(item)
+            currentRowWidth += itemWidth
+        }
+        return rows
+    }
+
+    override func layout() {
+        super.layout()
+        let availableWidth = bounds.width
+        let rows = computeRows(forWidth: availableWidth)
+
+        var y: CGFloat = 0
+        for row in rows {
+            let rowHeight = row.map { $0.fittingSize.height }.max() ?? 0
+            // Calculate total row width for centering
+            var totalRowWidth: CGFloat = 0
+            for (i, item) in row.enumerated() {
+                totalRowWidth += item.fittingSize.width
+                if i > 0 { totalRowWidth += itemSpacing }
+            }
+            var x = max(0, (availableWidth - totalRowWidth) / 2)
+
+            for item in row {
+                let size = item.fittingSize
+                item.frame = NSRect(
+                    x: x,
+                    y: y + (rowHeight - size.height) / 2,
+                    width: size.width,
+                    height: size.height
+                )
+                x += size.width + itemSpacing
+            }
+            y += rowHeight + rowSpacing
+        }
+    }
+
+    override var intrinsicContentSize: NSSize {
+        let w = bounds.width > 0 ? bounds.width : 320
+        return NSSize(width: NSView.noIntrinsicMetric, height: heightForWidth(w))
     }
 }
