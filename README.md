@@ -4,6 +4,12 @@ A lightweight native macOS browser wrapper for [FarmRPG.com](https://farmrpg.com
 
 Inspired by [this Reddit post](https://www.reddit.com/r/FarmRPG/comments/1s92s47/i_built_a_lightweight_browser_for_farmrpg/) describing a compact browser overlay for FarmRPG with always-on-top, transparency, and hide/show hotkey features.
 
+## Screenshots
+
+| Main Window | Controls Expanded |
+|---|---|
+| ![Main window](screenshots/main.png) | ![Controls expanded](screenshots/controls.png) |
+
 ## Features
 
 - **Lightweight** — Native Swift + WKWebView using the system WebKit engine. No bundled browser, binary under 5MB.
