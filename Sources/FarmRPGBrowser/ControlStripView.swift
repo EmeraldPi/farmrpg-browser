@@ -166,12 +166,7 @@ class ControlStripView: NSView, NSTextFieldDelegate {
             hc.constant = totalHeight
         }
 
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.15
-            context.allowsImplicitAnimation = true
-            self.targetWindow?.layoutIfNeeded()
-            self.superview?.layoutSubtreeIfNeeded()
-        }
+        self.superview?.layoutSubtreeIfNeeded()
     }
 
     override func layout() {
