@@ -71,6 +71,27 @@ class OverlayControls: NSObject {
         homeItem.target = self
         navMenu.addItem(homeItem)
 
+        // Zoom menu
+        let zoomMenuItem = NSMenuItem()
+        mainMenu.addItem(zoomMenuItem)
+        let zoomMenu = NSMenu(title: "Zoom")
+        zoomMenuItem.submenu = zoomMenu
+
+        let zoomInItem = NSMenuItem(title: "Zoom In", action: #selector(zoomIn), keyEquivalent: "+")
+        zoomInItem.keyEquivalentModifierMask = .command
+        zoomInItem.target = self
+        zoomMenu.addItem(zoomInItem)
+
+        let zoomOutItem = NSMenuItem(title: "Zoom Out", action: #selector(zoomOut), keyEquivalent: "-")
+        zoomOutItem.keyEquivalentModifierMask = .command
+        zoomOutItem.target = self
+        zoomMenu.addItem(zoomOutItem)
+
+        let zoomResetItem = NSMenuItem(title: "Actual Size", action: #selector(zoomReset), keyEquivalent: "0")
+        zoomResetItem.keyEquivalentModifierMask = .command
+        zoomResetItem.target = self
+        zoomMenu.addItem(zoomResetItem)
+
         // View menu
         let viewMenuItem = NSMenuItem()
         mainMenu.addItem(viewMenuItem)
@@ -179,6 +200,26 @@ class OverlayControls: NSObject {
 
     @objc func goHome() {
         webViewController?.loadFarmRPG()
+    }
+
+    @objc func zoomIn() {
+        webViewController?.zoomIn()
+        saveZoom()
+    }
+
+    @objc func zoomOut() {
+        webViewController?.zoomOut()
+        saveZoom()
+    }
+
+    @objc func zoomReset() {
+        webViewController?.resetZoom()
+        saveZoom()
+    }
+
+    private func saveZoom() {
+        Preferences.shared.zoomLevel = webViewController?.zoomLevel ?? 1.0
+        Preferences.shared.save()
     }
 
     // MARK: - Snap Actions

@@ -2,16 +2,20 @@ import AppKit
 
 class ControlStripView: NSView {
     private var targetWindow: MainWindow?
+    private weak var webViewController: WebViewController?
     private var opacitySlider: NSSlider!
+    private var zoomSlider: NSSlider!
+    private var zoomLabel: NSTextField!
     private var alwaysOnTopButton: NSButton!
     private var toggleButton: NSButton!
     private var stripContainer: NSView!
     private var isExpanded = false
 
-    private let stripHeight: CGFloat = 36
+    private let stripHeight: CGFloat = 72
 
-    init(window: MainWindow) {
+    init(window: MainWindow, webViewController: WebViewController) {
         self.targetWindow = window
+        self.webViewController = webViewController
         super.init(frame: .zero)
         setupViews()
     }
@@ -82,6 +86,34 @@ class ControlStripView: NSView {
         }
         stripContainer.addSubview(snapStack)
 
+        // --- Row 2: Zoom ---
+        let zoomTitleLabel = NSTextField(labelWithString: "Zoom:")
+        zoomTitleLabel.translatesAutoresizingMaskIntoConstraints = false
+        zoomTitleLabel.font = NSFont.systemFont(ofSize: 11)
+        stripContainer.addSubview(zoomTitleLabel)
+
+        let initialZoom = Preferences.shared.zoomLevel
+        zoomSlider = NSSlider(value: Double(initialZoom), minValue: 0.25, maxValue: 3.0, target: self, action: #selector(zoomChanged(_:)))
+        zoomSlider.translatesAutoresizingMaskIntoConstraints = false
+        zoomSlider.isContinuous = true
+        stripContainer.addSubview(zoomSlider)
+
+        zoomLabel = NSTextField(labelWithString: "\(Int(initialZoom * 100))%")
+        zoomLabel.translatesAutoresizingMaskIntoConstraints = false
+        zoomLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+        zoomLabel.alignment = .right
+        stripContainer.addSubview(zoomLabel)
+
+        let zoomResetBtn = NSButton(frame: .zero)
+        zoomResetBtn.bezelStyle = .inline
+        zoomResetBtn.title = "Reset"
+        zoomResetBtn.font = NSFont.systemFont(ofSize: 10)
+        zoomResetBtn.translatesAutoresizingMaskIntoConstraints = false
+        zoomResetBtn.target = self
+        zoomResetBtn.action = #selector(zoomReset)
+        stripContainer.addSubview(zoomResetBtn)
+
+        let rowHeight: CGFloat = 36
         // Layout
         NSLayoutConstraint.activate([
             // Toggle button at top, centered
@@ -95,23 +127,35 @@ class ControlStripView: NSView {
             stripContainer.trailingAnchor.constraint(equalTo: trailingAnchor),
             stripContainer.heightAnchor.constraint(equalToConstant: stripHeight),
 
-            // Always on top — left side
+            // Row 1: Always on top, opacity, snap (centered in top half)
             alwaysOnTopButton.leadingAnchor.constraint(equalTo: stripContainer.leadingAnchor, constant: 8),
-            alwaysOnTopButton.centerYAnchor.constraint(equalTo: stripContainer.centerYAnchor),
+            alwaysOnTopButton.centerYAnchor.constraint(equalTo: stripContainer.topAnchor, constant: rowHeight / 2),
 
-            // Opacity label
             opacityLabel.leadingAnchor.constraint(equalTo: alwaysOnTopButton.trailingAnchor, constant: 12),
-            opacityLabel.centerYAnchor.constraint(equalTo: stripContainer.centerYAnchor),
+            opacityLabel.centerYAnchor.constraint(equalTo: alwaysOnTopButton.centerYAnchor),
 
-            // Opacity slider
             opacitySlider.leadingAnchor.constraint(equalTo: opacityLabel.trailingAnchor, constant: 4),
-            opacitySlider.centerYAnchor.constraint(equalTo: stripContainer.centerYAnchor),
+            opacitySlider.centerYAnchor.constraint(equalTo: alwaysOnTopButton.centerYAnchor),
             opacitySlider.widthAnchor.constraint(greaterThanOrEqualToConstant: 60),
 
-            // Snap buttons — right side
             snapStack.leadingAnchor.constraint(equalTo: opacitySlider.trailingAnchor, constant: 12),
             snapStack.trailingAnchor.constraint(lessThanOrEqualTo: stripContainer.trailingAnchor, constant: -8),
-            snapStack.centerYAnchor.constraint(equalTo: stripContainer.centerYAnchor),
+            snapStack.centerYAnchor.constraint(equalTo: alwaysOnTopButton.centerYAnchor),
+
+            // Row 2: Zoom (centered in bottom half)
+            zoomTitleLabel.leadingAnchor.constraint(equalTo: stripContainer.leadingAnchor, constant: 8),
+            zoomTitleLabel.centerYAnchor.constraint(equalTo: stripContainer.topAnchor, constant: rowHeight + rowHeight / 2),
+
+            zoomSlider.leadingAnchor.constraint(equalTo: zoomTitleLabel.trailingAnchor, constant: 4),
+            zoomSlider.centerYAnchor.constraint(equalTo: zoomTitleLabel.centerYAnchor),
+            zoomSlider.widthAnchor.constraint(greaterThanOrEqualToConstant: 120),
+
+            zoomLabel.leadingAnchor.constraint(equalTo: zoomSlider.trailingAnchor, constant: 6),
+            zoomLabel.centerYAnchor.constraint(equalTo: zoomTitleLabel.centerYAnchor),
+            zoomLabel.widthAnchor.constraint(equalToConstant: 40),
+
+            zoomResetBtn.leadingAnchor.constraint(equalTo: zoomLabel.trailingAnchor, constant: 6),
+            zoomResetBtn.centerYAnchor.constraint(equalTo: zoomTitleLabel.centerYAnchor),
         ])
 
         self.translatesAutoresizingMaskIntoConstraints = false
@@ -158,6 +202,22 @@ class ControlStripView: NSView {
         Preferences.shared.save()
     }
 
+    @objc private func zoomChanged(_ sender: NSSlider) {
+        let value = CGFloat(sender.doubleValue)
+        webViewController?.zoomLevel = value
+        zoomLabel.stringValue = "\(Int(value * 100))%"
+        Preferences.shared.zoomLevel = value
+        Preferences.shared.save()
+    }
+
+    @objc private func zoomReset() {
+        webViewController?.resetZoom()
+        zoomSlider.doubleValue = 1.0
+        zoomLabel.stringValue = "100%"
+        Preferences.shared.zoomLevel = 1.0
+        Preferences.shared.save()
+    }
+
     @objc private func snapAction(_ sender: NSButton) {
         guard let win = targetWindow else { return }
         let positions: [SnapPosition] = [.topLeft, .topRight, .bottomLeft, .bottomRight, .center]
@@ -167,5 +227,8 @@ class ControlStripView: NSView {
     func syncState() {
         alwaysOnTopButton.state = targetWindow?.isAlwaysOnTop == true ? .on : .off
         opacitySlider.doubleValue = Double(targetWindow?.alphaValue ?? 1.0)
+        let zoom = webViewController?.zoomLevel ?? 1.0
+        zoomSlider.doubleValue = Double(zoom)
+        zoomLabel.stringValue = "\(Int(zoom * 100))%"
     }
 }

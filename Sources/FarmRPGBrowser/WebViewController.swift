@@ -44,6 +44,28 @@ class WebViewController: NSViewController, WKNavigationDelegate, WKUIDelegate {
         webView.goForward()
     }
 
+    // MARK: - Zoom
+
+    var zoomLevel: CGFloat {
+        get { webView.pageZoom }
+        set {
+            let clamped = max(0.25, min(3.0, newValue))
+            webView.pageZoom = clamped
+        }
+    }
+
+    func zoomIn() {
+        zoomLevel = (zoomLevel * 10 + 1) / 10  // step by 0.1
+    }
+
+    func zoomOut() {
+        zoomLevel = (zoomLevel * 10 - 1) / 10
+    }
+
+    func resetZoom() {
+        zoomLevel = 1.0
+    }
+
     // MARK: - WKNavigationDelegate
 
     func webView(_ webView: WKWebView,

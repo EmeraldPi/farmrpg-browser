@@ -26,9 +26,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         mainWindow.setOpacity(prefs.opacity)
 
         // Build content: control strip on top, web view below
-        controlStrip = ControlStripView(window: mainWindow)
+        controlStrip = ControlStripView(window: mainWindow, webViewController: webViewController)
 
+        // Accessing .view triggers loadView(), so webView exists after this
         let webView = webViewController.view
+        webViewController.zoomLevel = prefs.zoomLevel
         webView.translatesAutoresizingMaskIntoConstraints = false
 
         let container = NSView(frame: frame)

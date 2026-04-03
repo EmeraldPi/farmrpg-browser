@@ -13,10 +13,12 @@ class Preferences {
         static let windowWidth = "windowWidth"
         static let windowHeight = "windowHeight"
         static let hasStoredFrame = "hasStoredFrame"
+        static let zoomLevel = "zoomLevel"
     }
 
     var alwaysOnTop: Bool = false
     var opacity: CGFloat = 1.0
+    var zoomLevel: CGFloat = 1.0
     var windowFrame: NSRect?
 
     private init() {}
@@ -26,6 +28,9 @@ class Preferences {
 
         let storedOpacity = defaults.double(forKey: Keys.opacity)
         opacity = storedOpacity > 0 ? CGFloat(storedOpacity) : 1.0
+
+        let storedZoom = defaults.double(forKey: Keys.zoomLevel)
+        zoomLevel = storedZoom > 0 ? CGFloat(storedZoom) : 1.0
 
         if defaults.bool(forKey: Keys.hasStoredFrame) {
             let x = defaults.double(forKey: Keys.windowX)
@@ -41,6 +46,7 @@ class Preferences {
     func save() {
         defaults.set(alwaysOnTop, forKey: Keys.alwaysOnTop)
         defaults.set(Double(opacity), forKey: Keys.opacity)
+        defaults.set(Double(zoomLevel), forKey: Keys.zoomLevel)
 
         if let frame = windowFrame {
             defaults.set(true, forKey: Keys.hasStoredFrame)
