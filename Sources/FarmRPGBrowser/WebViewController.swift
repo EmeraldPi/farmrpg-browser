@@ -49,7 +49,7 @@ class WebViewController: NSViewController, WKNavigationDelegate, WKUIDelegate {
     var zoomLevel: CGFloat {
         get { webView.pageZoom }
         set {
-            let clamped = max(0.25, min(3.0, newValue))
+            let clamped = max(0.25, min(1.25, newValue))
             webView.pageZoom = clamped
         }
     }

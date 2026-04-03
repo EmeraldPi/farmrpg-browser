@@ -1,6 +1,6 @@
 import AppKit
 
-class ControlStripView: NSView {
+class ControlStripView: NSView, NSTextFieldDelegate {
     private var targetWindow: MainWindow?
     private weak var webViewController: WebViewController?
     private var opacitySlider: NSSlider!
@@ -96,13 +96,19 @@ class ControlStripView: NSView {
         let zoomTitleLabel = NSTextField(labelWithString: "Zoom:")
         zoomTitleLabel.font = NSFont.systemFont(ofSize: 11)
         let initialZoom = Preferences.shared.zoomLevel
-        zoomSlider = NSSlider(value: Double(initialZoom), minValue: 0.25, maxValue: 3.0, target: self, action: #selector(zoomChanged(_:)))
+        zoomSlider = NSSlider(value: Double(initialZoom), minValue: 0.25, maxValue: 1.25, target: self, action: #selector(zoomChanged(_:)))
         zoomSlider.isContinuous = true
         zoomSlider.widthAnchor.constraint(equalToConstant: 80).isActive = true
-        zoomLabel = NSTextField(labelWithString: "\(Int(initialZoom * 100))%")
+        zoomLabel = NSTextField(string: "\(Int(initialZoom * 100))%")
         zoomLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular)
-        zoomLabel.alignment = .right
-        zoomLabel.widthAnchor.constraint(equalToConstant: 36).isActive = true
+        zoomLabel.alignment = .center
+        zoomLabel.isEditable = true
+        zoomLabel.isSelectable = true
+        zoomLabel.isBordered = false
+        zoomLabel.drawsBackground = false
+        zoomLabel.focusRingType = .none
+        zoomLabel.delegate = self
+        zoomLabel.widthAnchor.constraint(equalToConstant: 48).isActive = true
         let zoomResetBtn = NSButton(frame: .zero)
         zoomResetBtn.bezelStyle = .inline
         zoomResetBtn.title = "Reset"
@@ -201,6 +207,20 @@ class ControlStripView: NSView {
         zoomLabel.stringValue = "\(Int(value * 100))%"
         Preferences.shared.zoomLevel = value
         Preferences.shared.save()
+    }
+
+    // NSTextFieldDelegate — user typed a zoom percentage
+    func control(_ control: NSControl, textShouldEndEditing fieldEditor: NSText) -> Bool {
+        let text = fieldEditor.string.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "%", with: "")
+        if let percent = Double(text) {
+            let value = CGFloat(max(25, min(125, percent))) / 100.0
+            webViewController?.zoomLevel = value
+            zoomSlider.doubleValue = Double(value)
+            zoomLabel.stringValue = "\(Int(value * 100))%"
+            Preferences.shared.zoomLevel = value
+            Preferences.shared.save()
+        }
+        return true
     }
 
     @objc private func zoomReset() {
