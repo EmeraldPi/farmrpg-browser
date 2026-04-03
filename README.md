@@ -37,7 +37,7 @@ Inspired by [this Reddit post](https://www.reddit.com/r/FarmRPG/comments/1s92s47
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/farmrpg-browser.git
+git clone https://github.com/EmeraldPi/farmrpg-browser.git
 cd farmrpg-browser
 
 # Build and run (debug)
