@@ -5,6 +5,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var webViewController: WebViewController!
     var hotkeyManager: HotkeyManager!
     var overlayControls: OverlayControls!
+    var controlStrip: ControlStripView!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -19,18 +20,46 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let prefs = Preferences.shared
         let frame = prefs.windowFrame ?? NSRect(x: 0, y: 0, width: 480, height: 720)
         mainWindow = MainWindow(contentRect: frame)
-        mainWindow.contentViewController = webViewController
 
         // Apply saved preferences
         mainWindow.setAlwaysOnTop(prefs.alwaysOnTop)
         mainWindow.setOpacity(prefs.opacity)
+
+        // Build content: control strip on top, web view below
+        controlStrip = ControlStripView(window: mainWindow)
+
+        let webView = webViewController.view
+        webView.translatesAutoresizingMaskIntoConstraints = false
+
+        let container = NSView(frame: frame)
+        container.addSubview(controlStrip)
+        container.addSubview(webView)
+
+        // The titlebar is transparent and full-size content view pushes
+        // content under it; offset the control strip below the traffic lights
+        let titlebarOffset: CGFloat = 28
+
+        let stripHeightConstraint = controlStrip.heightAnchor.constraint(equalToConstant: controlStrip.totalHeight)
+        NSLayoutConstraint.activate([
+            controlStrip.topAnchor.constraint(equalTo: container.topAnchor, constant: titlebarOffset),
+            controlStrip.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            controlStrip.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            stripHeightConstraint,
+
+            webView.topAnchor.constraint(equalTo: controlStrip.bottomAnchor),
+            webView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            webView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            webView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+        ])
+
+        mainWindow.contentView = container
 
         // Center window if no saved frame
         if prefs.windowFrame == nil {
             mainWindow.center()
         }
 
-        // Set up menu bar
+        // Set up menu bar (keeps keyboard shortcuts working)
         overlayControls = OverlayControls(window: mainWindow, webViewController: webViewController)
         NSApp.mainMenu = overlayControls.createMainMenu()
 

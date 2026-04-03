@@ -1,6 +1,6 @@
 import AppKit
 
-enum SnapPosition {
+enum SnapPosition: Equatable {
     case topLeft
     case topRight
     case bottomLeft

@@ -4,7 +4,7 @@ class MainWindow: NSWindow {
     init(contentRect: NSRect) {
         super.init(
             contentRect: contentRect,
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -16,12 +16,6 @@ class MainWindow: NSWindow {
         self.isMovableByWindowBackground = true
         self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         self.isReleasedWhenClosed = false
-
-        // Enable toolbar area for a cleaner look
-        let toolbar = NSToolbar(identifier: "mainToolbar")
-        toolbar.showsBaselineSeparator = false
-        self.toolbar = toolbar
-        self.toolbarStyle = .unifiedCompact
     }
 
     // MARK: - Always on Top
