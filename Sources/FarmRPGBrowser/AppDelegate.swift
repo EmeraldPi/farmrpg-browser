@@ -1,6 +1,6 @@
 import AppKit
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var mainWindow: MainWindow!
     var webViewController: WebViewController!
     var hotkeyManager: HotkeyManager!
@@ -59,6 +59,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         mainWindow.contentView = container
 
+        mainWindow.delegate = self
+
         // Center window if no saved frame
         if prefs.windowFrame == nil {
             mainWindow.center()
@@ -88,10 +90,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ application: NSApplication) -> Bool {
-        return true
+        // Return false so the app stays alive when the window is hidden via hotkey
+        return false
     }
 
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
         return true
+    }
+
+    // MARK: - NSWindowDelegate
+
+    // Quit when the user clicks the red close button
+    func windowWillClose(_ notification: Notification) {
+        NSApp.terminate(nil)
     }
 }
