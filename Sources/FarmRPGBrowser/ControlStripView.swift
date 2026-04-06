@@ -49,10 +49,8 @@ class ControlStripView: NSView, NSTextFieldDelegate {
 
     private func setupViews() {
         // Container for the control strip (hidden by default)
-        stripContainer = NSView(frame: .zero)
+        stripContainer = DynamicBackgroundView(frame: .zero)
         stripContainer.translatesAutoresizingMaskIntoConstraints = false
-        stripContainer.wantsLayer = true
-        stripContainer.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.95).cgColor
         stripContainer.isHidden = true
         addSubview(stripContainer)
 
@@ -238,6 +236,26 @@ class ControlStripView: NSView, NSTextFieldDelegate {
         let zoom = webViewController?.zoomLevel ?? 1.0
         zoomSlider.doubleValue = Double(zoom)
         zoomLabel.stringValue = "\(Int(zoom * 100))%"
+    }
+}
+
+// MARK: - DynamicBackgroundView
+
+/// A view whose background color updates automatically on dark/light mode changes.
+class DynamicBackgroundView: NSView {
+    override var wantsUpdateLayer: Bool { true }
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func updateLayer() {
+        layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.95).cgColor
     }
 }
 
